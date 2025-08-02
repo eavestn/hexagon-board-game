@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WWII Strategic Command</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1 id="gameTitle">⚔️ WWII STRATEGIC COMMAND ⚔️</h1>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="controls" id="controlsPanel">
+        <div class="controls-header">
+            <span class="drag-handle">≡≡≡ COMMAND PANEL ≡≡≡</span>
+            <button class="toggle-controls" onclick="toggleControls()">⚙️</button>
+        </div>
+        <div class="control-panels">
+        <div class="control-group">
+            <label for="boardWidth">Grid X:</label>
+            <input type="number" id="boardWidth" min="5" max="50" value="11" onchange="updateBoardConfig()">
+            
+            <label for="boardHeight">Grid Y:</label>
+            <input type="number" id="boardHeight" min="5" max="50" value="11" onchange="updateBoardConfig()">
+            
+            <label for="hexRadius">Scale:</label>
+            <input type="number" id="hexRadius" min="15" max="75" value="50" onchange="updateBoardConfig()">
+            
+            <label for="strategicHexes">Objectives:</label>
+            <input type="number" id="strategicHexes" min="0" max="10" value="4" onchange="updateBoardConfig()">
+        </div>
+        
+        <div class="control-group">
+            <label for="faction1">Army Alpha:</label>
+            <select id="faction1" onchange="updateFactions()">
+                <option value="german" selected>Wehrmacht</option>
+                <option value="british">British Army</option>
+                <option value="italian">Regio Esercito</option>
+                <option value="american">US Army</option>
+            </select>
+            
+            <label for="faction2">Army Beta:</label>
+            <select id="faction2" onchange="updateFactions()">
+                <option value="german">Wehrmacht</option>
+                <option value="british" selected>British Army</option>
+                <option value="italian">Regio Esercito</option>
+                <option value="american">US Army</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <button onclick="drawBoard()">📋 Deploy</button>
+            <button onclick="clearCanvas()">🗑️ Clear</button>
+            <button onclick="resetView()">🎯 Center</button>
+            <span>Scale: <span id="zoomLevel">100%</span></span>
+            <span> | Sectors: <span id="hexCount">0</span></span>
+        </div>
+        </div>
+    </div>
+
+    <script src="js/hexagonal-board.js"></script>
+</body>
+</html>

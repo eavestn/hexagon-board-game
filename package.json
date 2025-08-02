@@ -1,0 +1,36 @@
+{
+  "name": "hexagon-board-game",
+  "version": "1.0.0",
+  "description": "HTML5 canvas-based hexagonal board game",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "dev": "live-server --port=3000 --open=index.html",
+    "build": "echo \"No build process needed for vanilla JS\" && exit 0",
+    "install-pan-zoom": "npm install pan-zoom",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "hexagonal",
+    "board-game",
+    "canvas",
+    "html5",
+    "javascript",
+    "game"
+  ],
+  "author": "eavestn@gmail.com",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eavestn/hexagon-board-game.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eavestn/hexagon-board-game/issues"
+  },
+  "homepage": "https://github.com/eavestn/hexagon-board-game#readme"
+}
