@@ -33,12 +33,121 @@ const FACTIONS = {
     american: { name: 'American', color: '#4682b4', borderColor: '#2f4f4f', flagImage: null }
 };
 
+const UNIT_TYPES = {
+    lightInfantry: {
+        name: 'Light Infantry',
+        health: 1,
+        strength: 1,
+        movementCost: 1,
+        purchaseCost: 3,
+        symbol: '🚶',
+        color: '#8FBC8F'
+    },
+    heavyInfantry: {
+        name: 'Heavy Infantry',
+        health: 1,
+        strength: 2,
+        movementCost: 2,
+        purchaseCost: 3,
+        symbol: '🥾',
+        color: '#556B2F'
+    },
+    lightMechanical: {
+        name: 'Light Mechanical',
+        health: 1,
+        strength: 3,
+        movementCost: 2,
+        purchaseCost: 3,
+        symbol: '🚗',
+        color: '#4682B4'
+    },
+    heavyMechanical: {
+        name: 'Heavy Mechanical',
+        health: 2,
+        strength: 4,
+        movementCost: 3,
+        purchaseCost: 3,
+        symbol: '🚛',
+        color: '#2F4F4F'
+    },
+    artillery: {
+        name: 'Artillery',
+        health: 1,
+        strength: 1,
+        movementCost: 2,
+        purchaseCost: 3,
+        symbol: '🎯',
+        color: '#B22222',
+        range: 2
+    }
+};
+
 function updateHexDimensions() {
     BOARD_CONFIG.hexWidth = Math.sqrt(3) * BOARD_CONFIG.hexRadius;
     BOARD_CONFIG.hexHeight = 2 * BOARD_CONFIG.hexRadius;
 }
 
 updateHexDimensions();
+
+class Unit {
+    constructor(id, type, faction, hex = null) {
+        this.id = id;
+        this.type = type;
+        this.faction = faction;
+        this.hex = hex;
+        this.currentHealth = UNIT_TYPES[type].health;
+        this.hasActed = false; // Track if unit has moved/fired this turn
+    }
+
+    get typeData() {
+        return UNIT_TYPES[this.type];
+    }
+
+    get strength() {
+        return this.typeData.strength;
+    }
+
+    get maxHealth() {
+        return this.typeData.health;
+    }
+
+    get movementCost() {
+        return this.typeData.movementCost;
+    }
+
+    get symbol() {
+        return this.typeData.symbol;
+    }
+
+    get color() {
+        return this.typeData.color;
+    }
+
+    get isAlive() {
+        return this.currentHealth > 0;
+    }
+
+    get isArtillery() {
+        return this.type === 'artillery';
+    }
+
+    takeDamage(amount = 1) {
+        this.currentHealth = Math.max(0, this.currentHealth - amount);
+        return this.isAlive;
+    }
+
+    canAct() {
+        return this.isAlive && !this.hasActed;
+    }
+
+    markActed() {
+        this.hasActed = true;
+    }
+
+    resetForNewTurn() {
+        this.hasActed = false;
+    }
+}
 
 class HexagonalBoard {
     constructor(canvas, config) {
@@ -60,6 +169,11 @@ class HexagonalBoard {
         // Resource management
         this.faction1Resources = 0;
         this.faction2Resources = 0;
+        
+        // Unit management
+        this.units = new Map(); // Map of unit ID to Unit instance
+        this.nextUnitId = 1;
+        this.selectedUnit = null;
         
         // Turn management system
         this.currentYear = 1935;
@@ -84,7 +198,7 @@ class HexagonalBoard {
         this.turnPanelX = 0; // Will be set to top-right initially
         this.turnPanelY = 20;
         this.turnPanelWidth = 320;
-        this.turnPanelHeight = 180;
+        this.turnPanelHeight = 200;
         this.turnPanelDragging = false;
         
         // Ground texture
@@ -151,6 +265,9 @@ class HexagonalBoard {
             
             this.updateSeasonFromDate();
         }
+        
+        // Reset units for new turn
+        this.resetUnitsForNewTurn();
         
         this.draw(); // Redraw to update UI
         return true;
@@ -277,6 +394,13 @@ class HexagonalBoard {
         
         // Calculate initial resources
         this.calculateResources();
+        
+        // Give starting resources for first turn gameplay
+        this.faction1Resources += 10; // Starting resources
+        this.faction2Resources += 10; // Starting resources
+        
+        // Debug: log initial resources
+        console.log(`Initial resources - ${this.faction1}: ${this.faction1Resources}, ${this.faction2}: ${this.faction2Resources}`);
     }
     
     setupStartingPositions() {
@@ -298,6 +422,11 @@ class HexagonalBoard {
             
             // Distribute strategic hexes
             this.distributeStrategicHexes();
+            
+            // Add starting units - each faction starts with 1 Light Infantry unit
+            // Players can choose to place at corner or strategic hex, for now place at corner
+            this.createUnit('lightInfantry', this.faction1, topLeft);
+            this.createUnit('lightInfantry', this.faction2, bottomRight);
         }
     }
     
@@ -376,15 +505,17 @@ class HexagonalBoard {
     }
     
     getHexDistance(hex1, hex2) {
-        // Simple euclidean distance approximation for hex spacing
-        // This is more reliable than complex hex math for spacing purposes
-        const dx = hex1.x - hex2.x;
-        const dy = hex1.y - hex2.y;
-        const euclideanDistance = Math.sqrt(dx * dx + dy * dy);
+        // Convert offset coordinates to axial coordinates for proper hex distance
+        const q1 = hex1.col - Math.floor(hex1.row / 2);
+        const r1 = hex1.row;
+        const q2 = hex2.col - Math.floor(hex2.row / 2);
+        const r2 = hex2.row;
         
-        // Convert to approximate hex steps (each hex is roughly hexRadius * 1.5 apart)
-        const hexSteps = euclideanDistance / (this.config.hexRadius * 1.5);
-        return hexSteps;
+        // Calculate hex distance using axial coordinates
+        const hexDistance = (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+        
+        console.log(`Hex distance from (${hex1.row},${hex1.col}) to (${hex2.row},${hex2.col}): ${hexDistance}`);
+        return hexDistance;
     }
     
     createHexagon(row, col) {
@@ -403,8 +534,210 @@ class HexagonalBoard {
             radius: this.config.hexRadius,
             isStrategic: false,
             owner: null,
-            resourceValue: 2 // Default resource value (will be 4 for strategic hexes)
+            resourceValue: 2, // Default resource value (will be 4 for strategic hexes)
+            units: [] // Array of unit IDs on this hex
         };
+    }
+    
+    // Unit Management Methods
+    createUnit(type, faction, hex = null) {
+        const unit = new Unit(this.nextUnitId++, type, faction, hex);
+        this.units.set(unit.id, unit);
+        
+        if (hex) {
+            hex.units.push(unit.id);
+            unit.hex = hex;
+        }
+        
+        return unit;
+    }
+    
+    removeUnit(unitId) {
+        const unit = this.units.get(unitId);
+        if (unit && unit.hex) {
+            const hexIndex = unit.hex.units.indexOf(unitId);
+            if (hexIndex !== -1) {
+                unit.hex.units.splice(hexIndex, 1);
+            }
+        }
+        this.units.delete(unitId);
+    }
+    
+    moveUnit(unitId, targetHex) {
+        const unit = this.units.get(unitId);
+        if (!unit) return false;
+        
+        // Remove from current hex
+        if (unit.hex) {
+            const hexIndex = unit.hex.units.indexOf(unitId);
+            if (hexIndex !== -1) {
+                unit.hex.units.splice(hexIndex, 1);
+            }
+        }
+        
+        // Add to target hex
+        targetHex.units.push(unitId);
+        unit.hex = targetHex;
+        
+        return true;
+    }
+    
+    getUnitsOnHex(hex) {
+        return hex.units.map(unitId => this.units.get(unitId)).filter(unit => unit);
+    }
+    
+    getFactionUnits(faction) {
+        return Array.from(this.units.values()).filter(unit => unit.faction === faction);
+    }
+    
+    getTotalFactionStrength(faction) {
+        return this.getFactionUnits(faction)
+            .filter(unit => unit.isAlive)
+            .reduce((total, unit) => total + unit.strength, 0);
+    }
+    
+    canPurchaseUnit(faction) {
+        const factionResources = faction === this.faction1 ? this.faction1Resources : this.faction2Resources;
+        const currentStrength = this.getTotalFactionStrength(faction);
+        
+        return factionResources >= 3 && currentStrength < 100;
+    }
+    
+    purchaseUnit(type, faction, hex) {
+        if (!this.canPurchaseUnit(faction)) return null;
+        
+        const unit = this.createUnit(type, faction, hex);
+        
+        // Deduct resources
+        if (faction === this.faction1) {
+            this.faction1Resources -= 3;
+        } else {
+            this.faction2Resources -= 3;
+        }
+        
+        return unit;
+    }
+    
+    resetUnitsForNewTurn() {
+        this.units.forEach(unit => unit.resetForNewTurn());
+    }
+    
+    // Movement system
+    calculateMovementCost(unit, fromHex, toHex) {
+        const distance = this.getHexDistance(fromHex, toHex);
+        const hexesToMove = Math.round(distance);
+        let baseCost = unit.movementCost * hexesToMove;
+        
+        // Debug distance calculation
+        console.log(`Distance calculation: euclidean=${distance.toFixed(2)}, hexesToMove=${hexesToMove}, unitMoveCost=${unit.movementCost}`);
+        
+        // Group movement penalty: +1 resource if moving away from unit group
+        const unitsOnStartHex = this.getUnitsOnHex(fromHex);
+        const hasOtherUnits = unitsOnStartHex.length > 1;
+        
+        if (hasOtherUnits) {
+            baseCost += 1; // Group movement penalty
+            console.log(`Group movement penalty applied: +1`);
+        }
+        
+        console.log(`Total movement cost: ${baseCost}`);
+        return baseCost;
+    }
+    
+    canMoveUnit(unit, targetHex) {
+        if (!unit || !unit.canAct()) return false;
+        if (!targetHex) return false;
+        if (unit.hex === targetHex) return false;
+        
+        const faction = unit.faction;
+        const currentResources = faction === this.faction1 ? this.faction1Resources : this.faction2Resources;
+        const movementCost = this.calculateMovementCost(unit, unit.hex, targetHex);
+        
+        return currentResources >= movementCost;
+    }
+    
+    moveUnitToHex(unit, targetHex) {
+        if (!this.canMoveUnit(unit, targetHex)) return false;
+        
+        const movementCost = this.calculateMovementCost(unit, unit.hex, targetHex);
+        
+        // Deduct movement cost
+        if (unit.faction === this.faction1) {
+            this.faction1Resources -= movementCost;
+        } else {
+            this.faction2Resources -= movementCost;
+        }
+        
+        // Move the unit
+        this.moveUnit(unit.id, targetHex);
+        unit.markActed();
+        
+        // Check for combat if enemy units are present
+        const unitsOnHex = this.getUnitsOnHex(targetHex);
+        const enemyUnits = unitsOnHex.filter(u => u.faction !== unit.faction);
+        
+        if (enemyUnits.length > 0) {
+            this.resolveCombat(targetHex);
+        }
+        
+        return true;
+    }
+    
+    // Combat system
+    resolveCombat(hex) {
+        const unitsOnHex = this.getUnitsOnHex(hex);
+        const faction1Units = unitsOnHex.filter(u => u.faction === this.faction1);
+        const faction2Units = unitsOnHex.filter(u => u.faction === this.faction2);
+        
+        if (faction1Units.length === 0 || faction2Units.length === 0) return;
+        
+        // Calculate total health and strength for each side
+        const faction1Health = faction1Units.reduce((total, unit) => total + unit.currentHealth, 0);
+        const faction1Strength = faction1Units.reduce((total, unit) => total + unit.strength, 0);
+        
+        const faction2Health = faction2Units.reduce((total, unit) => total + unit.currentHealth, 0);
+        const faction2Strength = faction2Units.reduce((total, unit) => total + unit.strength, 0);
+        
+        // Combat resolution
+        const faction1Damage = Math.min(faction1Strength, faction2Health);
+        const faction2Damage = Math.min(faction2Strength, faction1Health);
+        
+        // Apply damage
+        if (faction1Damage > 0) {
+            this.applyDamageToUnits(faction2Units, faction1Damage);
+        }
+        
+        if (faction2Damage > 0) {
+            this.applyDamageToUnits(faction1Units, faction2Damage);
+        }
+        
+        // Remove dead units
+        this.removeDeadUnits();
+        
+        console.log(`Combat at ${hex.row},${hex.col}: F1 dealt ${faction1Damage}, F2 dealt ${faction2Damage}`);
+    }
+    
+    applyDamageToUnits(units, totalDamage) {
+        // Simple damage distribution - kill units in order until damage is used up
+        let remainingDamage = totalDamage;
+        
+        for (const unit of units) {
+            if (remainingDamage <= 0) break;
+            
+            const damageToApply = Math.min(remainingDamage, unit.currentHealth);
+            unit.takeDamage(damageToApply);
+            remainingDamage -= damageToApply;
+        }
+    }
+    
+    removeDeadUnits() {
+        const deadUnits = Array.from(this.units.values()).filter(unit => !unit.isAlive);
+        deadUnits.forEach(unit => this.removeUnit(unit.id));
+        
+        // Clear selection if selected unit is dead
+        if (this.selectedUnit && !this.selectedUnit.isAlive) {
+            this.selectedUnit = null;
+        }
     }
     
     drawHexagon(hex) {
@@ -517,6 +850,75 @@ class HexagonalBoard {
             this.ctx.strokeText('\uf005', x, y + 20); // FA solid star
             this.ctx.fillText('\uf005', x, y + 20); // FA solid star
         }
+        
+        // Draw units on this hex
+        this.drawUnitsOnHex(hex);
+    }
+    
+    drawUnitsOnHex(hex) {
+        const units = this.getUnitsOnHex(hex);
+        if (units.length === 0) return;
+        
+        const { x, y, radius } = hex;
+        const unitRadius = 8;
+        const spacing = 16;
+        
+        // Calculate positions for units in a grid pattern
+        const cols = Math.ceil(Math.sqrt(units.length));
+        const rows = Math.ceil(units.length / cols);
+        const startX = x - ((cols - 1) * spacing) / 2;
+        const startY = y - ((rows - 1) * spacing) / 2 + 25; // Offset down from center
+        
+        units.forEach((unit, index) => {
+            if (!unit.isAlive) return;
+            
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const unitX = startX + col * spacing;
+            const unitY = startY + row * spacing;
+            
+            // Draw unit circle background
+            this.ctx.fillStyle = unit.color;
+            this.ctx.strokeStyle = '#1a202c';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(unitX, unitY, unitRadius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Add faction border color
+            const faction = FACTIONS[unit.faction];
+            if (faction) {
+                this.ctx.strokeStyle = faction.borderColor;
+                this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
+                this.ctx.arc(unitX, unitY, unitRadius + 2, 0, 2 * Math.PI);
+                this.ctx.stroke();
+            }
+            
+            // Draw unit symbol
+            this.ctx.fillStyle = '#f7fafc';
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(unit.symbol, unitX, unitY);
+            
+            // Show health if unit is damaged
+            if (unit.currentHealth < unit.maxHealth) {
+                this.ctx.fillStyle = '#e53e3e';
+                this.ctx.font = 'bold 8px monospace';
+                this.ctx.fillText(unit.currentHealth, unitX + unitRadius - 2, unitY - unitRadius + 2);
+            }
+            
+            // Highlight selected unit
+            if (this.selectedUnit && this.selectedUnit.id === unit.id) {
+                this.ctx.strokeStyle = '#ffd700';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(unitX, unitY, unitRadius + 4, 0, 2 * Math.PI);
+                this.ctx.stroke();
+            }
+        });
     }
     
     
@@ -738,15 +1140,19 @@ class HexagonalBoard {
         this.ctx.fillStyle = '#f7fafc';
         this.ctx.font = 'bold 14px monospace';
         
-        // Faction 1 resources
+        // Faction 1 resources and strength
         const faction1Info = FACTIONS[this.faction1];
+        const faction1Strength = this.getTotalFactionStrength(this.faction1);
         this.ctx.fillStyle = faction1Info.borderColor;
         this.ctx.fillText(`${faction1Info.name}: ${this.faction1Resources} Resources`, x - 10, y + 130);
+        this.ctx.fillText(`Strength: ${faction1Strength}/100`, x - 10, y + 145);
         
-        // Faction 2 resources
+        // Faction 2 resources and strength
         const faction2Info = FACTIONS[this.faction2];
+        const faction2Strength = this.getTotalFactionStrength(this.faction2);
         this.ctx.fillStyle = faction2Info.borderColor;
-        this.ctx.fillText(`${faction2Info.name}: ${this.faction2Resources} Resources`, x - 10, y + 150);
+        this.ctx.fillText(`${faction2Info.name}: ${this.faction2Resources} Resources`, x - 10, y + 165);
+        this.ctx.fillText(`Strength: ${faction2Strength}/100`, x - 10, y + 180);
         
         this.ctx.restore();
     }
@@ -993,7 +1399,89 @@ canvas.addEventListener('click', function(event) {
     
     const clickedHex = board.getHexagonAt(x, y);
     if (clickedHex) {
-        console.log(`Clicked hexagon at row: ${clickedHex.row}, col: ${clickedHex.col}`);
+        const unitsOnHex = board.getUnitsOnHex(clickedHex);
+        
+        if (unitsOnHex.length > 0) {
+            // Cycle through units on the hex
+            if (board.selectedUnit && unitsOnHex.includes(board.selectedUnit)) {
+                const currentIndex = unitsOnHex.indexOf(board.selectedUnit);
+                const nextIndex = (currentIndex + 1) % unitsOnHex.length;
+                board.selectedUnit = unitsOnHex[nextIndex];
+            } else {
+                board.selectedUnit = unitsOnHex[0];
+            }
+            console.log(`Selected unit: ${board.selectedUnit.typeData.name} (${board.selectedUnit.faction})`);
+        } else {
+            board.selectedUnit = null;
+            console.log(`Clicked empty hexagon at row: ${clickedHex.row}, col: ${clickedHex.col}`);
+        }
+        
+        board.draw(); // Redraw to show selection
+    }
+});
+
+canvas.addEventListener('contextmenu', function(event) {
+    event.preventDefault(); // Prevent context menu
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    const clickedHex = board.getHexagonAt(x, y);
+    if (clickedHex && board.selectedUnit) {
+        const unit = board.selectedUnit;
+        const faction = unit.faction;
+        const currentResources = faction === board.faction1 ? board.faction1Resources : board.faction2Resources;
+        const movementCost = board.calculateMovementCost(unit, unit.hex, clickedHex);
+        
+        console.log(`Unit: ${unit.typeData.name}, Faction: ${faction}`);
+        console.log(`Current resources: ${currentResources}, Movement cost: ${movementCost}`);
+        console.log(`Unit can act: ${unit.canAct()}, Unit has acted: ${unit.hasActed}`);
+        
+        if (board.canMoveUnit(unit, clickedHex)) {
+            console.log(`Moving ${unit.typeData.name} to ${clickedHex.row},${clickedHex.col} (Cost: ${movementCost})`);
+            
+            if (board.moveUnitToHex(unit, clickedHex)) {
+                console.log('Movement successful');
+                board.draw();
+            }
+        } else {
+            console.log('Cannot move unit - insufficient resources or unit cannot act');
+            
+            // Debug output
+            if (!unit.canAct()) {
+                console.log('Unit cannot act (already acted this turn)');
+            }
+            if (currentResources < movementCost) {
+                console.log(`Insufficient resources: need ${movementCost}, have ${currentResources}`);
+            }
+        }
+    }
+});
+
+// Add keyboard controls for unit purchasing
+document.addEventListener('keydown', function(event) {
+    if (!board.selectedUnit) return;
+    
+    const selectedHex = board.selectedUnit.hex;
+    const faction = board.selectedUnit.faction;
+    
+    // Number keys 1-5 to purchase different unit types
+    const unitTypeMap = {
+        '1': 'lightInfantry',
+        '2': 'heavyInfantry', 
+        '3': 'lightMechanical',
+        '4': 'heavyMechanical',
+        '5': 'artillery'
+    };
+    
+    const unitType = unitTypeMap[event.key];
+    if (unitType && board.canPurchaseUnit(faction)) {
+        const newUnit = board.purchaseUnit(unitType, faction, selectedHex);
+        if (newUnit) {
+            console.log(`Purchased ${newUnit.typeData.name} for ${faction} at ${selectedHex.row},${selectedHex.col}`);
+            board.draw();
+        }
     }
 });
 
@@ -1260,6 +1748,74 @@ function initDraggableTurnControls() {
     }
 }
 
+// Draggable unit controls functionality
+function initDraggableUnitControls() {
+    const unitControlsPanel = document.getElementById('unitControlsPanel');
+    const dragHandle = unitControlsPanel.querySelector('.drag-handle');
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    
+    dragHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = unitControlsPanel.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+        
+        // Change cursor and add visual feedback
+        document.body.style.cursor = 'grabbing';
+        unitControlsPanel.style.transition = 'none';
+        unitControlsPanel.classList.add('dragging');
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        let newX = e.clientX - dragOffset.x;
+        let newY = e.clientY - dragOffset.y;
+        
+        // Constrain to viewport bounds
+        const panelRect = unitControlsPanel.getBoundingClientRect();
+        const maxX = window.innerWidth - panelRect.width;
+        const maxY = window.innerHeight - panelRect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        unitControlsPanel.style.left = newX + 'px';
+        unitControlsPanel.style.top = newY + 'px';
+        unitControlsPanel.style.bottom = 'auto';
+        unitControlsPanel.style.right = 'auto';
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            unitControlsPanel.style.transition = '';
+            unitControlsPanel.classList.remove('dragging');
+            
+            // Save position to localStorage
+            const rect = unitControlsPanel.getBoundingClientRect();
+            localStorage.setItem('unitControlsPosition', JSON.stringify({
+                left: rect.left,
+                top: rect.top
+            }));
+        }
+    });
+    
+    // Load saved position
+    const savedPosition = localStorage.getItem('unitControlsPosition');
+    if (savedPosition) {
+        const pos = JSON.parse(savedPosition);
+        unitControlsPanel.style.left = pos.left + 'px';
+        unitControlsPanel.style.top = pos.top + 'px';
+        unitControlsPanel.style.bottom = 'auto';
+        unitControlsPanel.style.right = 'auto';
+    }
+}
+
 // Draggable title functionality
 function initDraggableTitle() {
     const gameTitle = document.getElementById('gameTitle');
@@ -1330,4 +1886,5 @@ updateZoomDisplay();
 updateTurnDisplay();
 initDraggableControls();
 initDraggableTurnControls();
+initDraggableUnitControls();
 initDraggableTitle();

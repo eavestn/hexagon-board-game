@@ -31,26 +31,36 @@ h1 {
     left: 50%;
     transform: translateX(-50%);
     margin: 0;
-    padding: 12px 25px;
-    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-    border: 2px solid #4a5568;
-    border-radius: 3px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    color: #f7fafc;
-    font-family: 'Courier New', monospace;
+    padding: 16px 32px;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+        linear-gradient(135deg, #f4f1ea 0%, #ede6d3 25%, #e3d5b7 50%, #d9c7a3 75%, #cdb896 100%);
+    border: 2px solid #8b7355;
+    border-radius: 15px;
+    box-shadow: 
+        0 8px 32px rgba(139, 115, 85, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        inset 0 -1px 2px rgba(139, 115, 85, 0.2);
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     font-weight: bold;
-    font-size: 18px;
+    font-size: 20px;
     letter-spacing: 2px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.6);
     z-index: 10;
     cursor: move;
     user-select: none;
     transition: all 0.2s ease;
+    filter: drop-shadow(2px 2px 4px rgba(139, 115, 85, 0.3));
 }
 
 h1:hover {
-    border-color: #718096;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    border-color: #6b5a47;
+    box-shadow: 
+        0 10px 40px rgba(139, 115, 85, 0.5),
+        inset 0 2px 6px rgba(255, 255, 255, 0.7),
+        inset 0 -1px 3px rgba(139, 115, 85, 0.3);
+    color: #2d1f15;
 }
 
 h1.dragging {
@@ -65,46 +75,67 @@ h1.dragging {
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-    border: 2px solid #4a5568;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #f4f1ea 0%, #ede6d3 25%, #e3d5b7 50%, #d9c7a3 75%, #cdb896 100%);
+    border: 2px solid #8b7355;
+    border-radius: 12px;
     padding: 0;
-    border-radius: 5px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 
+        0 8px 32px rgba(139, 115, 85, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -1px 0 rgba(139, 115, 85, 0.2);
     z-index: 10;
     max-width: 90%;
-    color: #f7fafc;
-    font-family: 'Courier New', monospace;
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     user-select: none;
+    position: relative;
+    /* Paper texture effect */
+    filter: drop-shadow(2px 2px 4px rgba(139, 115, 85, 0.3));
 }
 
 .controls-header {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-    padding: 8px 15px;
-    border-bottom: 2px solid #4a5568;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+        linear-gradient(135deg, #d9c7a3 0%, #cdb896 100%);
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-radius: 3px 3px 0 0;
+    border-radius: 10px 10px 0 0;
     position: relative;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 2px rgba(139, 115, 85, 0.2);
 }
 
 .drag-handle {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     cursor: move;
-    color: #cbd5e0;
+    color: #4a3728;
     flex-grow: 1;
     text-align: center;
-    padding: 2px 0;
+    padding: 4px 0;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6);
+    font-family: 'Georgia', serif;
 }
 
 .drag-handle:hover {
-    color: #f7fafc;
+    color: #2d1f15;
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.8);
 }
 
 .control-panels {
-    padding: 18px;
+    padding: 20px;
+    /* Subtle paper grain effect */
+    background-image: 
+        radial-gradient(circle at 1px 1px, rgba(139, 115, 85, 0.05) 1px, transparent 0);
+    background-size: 20px 20px;
 }
 
 .control-group {
@@ -118,23 +149,29 @@ h1.dragging {
 .control-group label {
     display: inline-block;
     font-weight: bold;
-    font-size: 13px;
-    color: #cbd5e0;
-    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     text-transform: uppercase;
     letter-spacing: 1px;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .control-group input[type="number"] {
-    width: 60px;
-    padding: 6px 8px;
-    border: 2px solid #4a5568;
-    border-radius: 3px;
-    font-size: 13px;
-    background: #1a202c;
-    color: #f7fafc;
-    font-family: 'Courier New', monospace;
+    width: 65px;
+    padding: 8px 10px;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    font-size: 15px;
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+        linear-gradient(135deg, #f9f6f0 0%, #f0e6d2 100%);
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     font-weight: bold;
+    box-shadow: 
+        inset 0 2px 4px rgba(139, 115, 85, 0.1),
+        0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .control-group input[type="number"]:focus {
@@ -144,14 +181,19 @@ h1.dragging {
 }
 
 .control-group select {
-    padding: 6px 8px;
-    border: 2px solid #4a5568;
-    border-radius: 3px;
-    background: #1a202c;
-    color: #f7fafc;
-    font-size: 13px;
-    font-family: 'Courier New', monospace;
+    padding: 8px 10px;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+        linear-gradient(135deg, #f9f6f0 0%, #f0e6d2 100%);
+    color: #4a3728;
+    font-size: 15px;
+    font-family: 'Georgia', serif;
     font-weight: bold;
+    box-shadow: 
+        inset 0 2px 4px rgba(139, 115, 85, 0.1),
+        0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .control-group select:focus {
@@ -180,26 +222,37 @@ h1.dragging {
 }
 
 button {
-    padding: 8px 16px;
+    padding: 10px 18px;
     margin-right: 10px;
-    font-size: 13px;
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-    border: 2px solid #718096;
-    border-radius: 3px;
+    font-size: 15px;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+        linear-gradient(135deg, #e8dcc6 0%, #d4c5a9 100%);
+    border: 1px solid #8b7355;
+    border-radius: 8px;
     cursor: pointer;
-    color: #f7fafc;
-    font-family: 'Courier New', monospace;
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all 0.2s ease;
+    box-shadow: 
+        0 2px 4px rgba(139, 115, 85, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.6);
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 button:hover {
-    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
-    border-color: #fc8181;
-    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 50%),
+        linear-gradient(135deg, #f0e6d2 0%, #e8dcc6 100%);
+    border-color: #6b5a47;
+    box-shadow: 
+        0 4px 8px rgba(139, 115, 85, 0.4),
+        inset 0 1px 3px rgba(255, 255, 255, 0.7);
     transform: translateY(-1px);
+    color: #2d1f15;
 }
 
 button:active {
@@ -317,44 +370,63 @@ button:active {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-    border: 2px solid #4a5568;
+    background: 
+        radial-gradient(circle at 25% 75%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 75% 25%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #f4f1ea 0%, #ede6d3 25%, #e3d5b7 50%, #d9c7a3 75%, #cdb896 100%);
+    border: 2px solid #8b7355;
     padding: 0;
-    border-radius: 5px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    box-shadow: 
+        0 8px 32px rgba(139, 115, 85, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -1px 0 rgba(139, 115, 85, 0.2);
     z-index: 10;
-    color: #f7fafc;
-    font-family: 'Courier New', monospace;
+    color: #4a3728;
+    font-family: 'Georgia', serif;
     user-select: none;
     min-width: 280px;
+    filter: drop-shadow(2px 2px 4px rgba(139, 115, 85, 0.3));
 }
 
 .turn-controls-header {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-    padding: 8px 15px;
-    border-bottom: 2px solid #4a5568;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+        linear-gradient(135deg, #d9c7a3 0%, #cdb896 100%);
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 3px 3px 0 0;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 2px rgba(139, 115, 85, 0.2);
 }
 
 .turn-controls .drag-handle {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     cursor: move;
-    color: #cbd5e0;
+    color: #4a3728;
     text-align: center;
-    padding: 2px 0;
+    padding: 4px 0;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6);
+    font-family: 'Georgia', serif;
 }
 
 .turn-controls .drag-handle:hover {
-    color: #f7fafc;
+    color: #2d1f15;
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.8);
 }
 
 .turn-control-content {
-    padding: 15px;
+    padding: 20px;
+    /* Subtle paper grain effect */
+    background-image: 
+        radial-gradient(circle at 1px 1px, rgba(139, 115, 85, 0.05) 1px, transparent 0);
+    background-size: 20px 20px;
 }
 
 .turn-control-group {
@@ -393,9 +465,11 @@ button:active {
 
 .turn-display {
     text-align: center;
-    font-size: 12px;
-    color: #cbd5e0;
+    font-size: 14px;
+    color: #4a3728;
     font-weight: bold;
+    font-family: 'Georgia', serif;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .turn-controls.dragging {
@@ -408,5 +482,138 @@ button:active {
 }
 
 .turn-controls.dragging .drag-handle {
+    color: #f7fafc;
+}
+
+/* Unit Controls Styling */
+.control-group h4 {
+    color: #4a3728 !important;
+    font-size: 16px;
+    margin: 0;
+    padding: 5px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+    width: 100%;
+    display: block !important;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+    font-family: 'Georgia', serif;
+}
+
+.control-group small {
+    color: #4a3728 !important;
+    font-size: 13px;
+    display: block !important;
+    margin: 2px 0;
+    width: 100%;
+    font-family: 'Georgia', serif;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Ensure unit controls are always visible */
+.control-group:last-child {
+    background: rgba(26, 32, 44, 0.3);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    border: 1px solid #4a5568;
+}
+
+/* Unit Controls Panel */
+.unit-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: 
+        radial-gradient(circle at 25% 75%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 75% 25%, rgba(139, 115, 85, 0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #f4f1ea 0%, #ede6d3 25%, #e3d5b7 50%, #d9c7a3 75%, #cdb896 100%);
+    border: 2px solid #8b7355;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 
+        0 8px 32px rgba(139, 115, 85, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -1px 0 rgba(139, 115, 85, 0.2);
+    z-index: 10;
+    color: #4a3728;
+    font-family: 'Georgia', serif;
+    user-select: none;
+    min-width: 300px;
+    filter: drop-shadow(2px 2px 4px rgba(139, 115, 85, 0.3));
+}
+
+.unit-controls-header {
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+        linear-gradient(135deg, #d9c7a3 0%, #cdb896 100%);
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 2px rgba(139, 115, 85, 0.2);
+}
+
+.unit-controls .drag-handle {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: move;
+    color: #4a3728;
+    text-align: center;
+    padding: 4px 0;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6);
+    font-family: 'Georgia', serif;
+}
+
+.unit-controls .drag-handle:hover {
+    color: #2d1f15;
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+.unit-control-content {
+    padding: 20px;
+    /* Subtle paper grain effect */
+    background-image: 
+        radial-gradient(circle at 1px 1px, rgba(139, 115, 85, 0.05) 1px, transparent 0);
+    background-size: 20px 20px;
+}
+
+.unit-control-group h4 {
+    color: #4a3728;
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+    padding-bottom: 5px;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+    font-family: 'Georgia', serif;
+}
+
+.unit-control-group small {
+    color: #4a3728;
+    font-size: 13px;
+    display: block;
+    margin: 3px 0;
+    font-family: 'Georgia', serif;
+    line-height: 1.4;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+.unit-controls.dragging {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    border-color: #e53e3e;
+}
+
+.unit-controls.dragging .unit-controls-header {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+.unit-controls.dragging .drag-handle {
     color: #f7fafc;
 }

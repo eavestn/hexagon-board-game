@@ -13,7 +13,7 @@
     
     <div class="controls" id="controlsPanel">
         <div class="controls-header">
-            <span class="drag-handle">≡≡≡ COMMAND PANEL ≡≡≡</span>
+            <span class="drag-handle">≡≡≡ SITUATION ROOM ≡≡≡</span>
             <button class="toggle-controls" onclick="toggleControls()">⚙️</button>
         </div>
         <div class="control-panels">
@@ -56,6 +56,33 @@
             <span>Scale: <span id="zoomLevel">100%</span></span>
             <span> | Sectors: <span id="hexCount">0</span></span>
         </div>
+        
+        <div class="control-group">
+            <h4>Unit Controls:</h4>
+            <small>• Left click: Select unit</small>
+            <small>• Right click: Move selected unit</small>
+            <small>• Keys 1-5: Purchase units (Light Infantry, Heavy Infantry, Light Mechanical, Heavy Mechanical, Artillery)</small>
+        </div>
+        </div>
+    </div>
+
+    <!-- Unit Controls Panel -->
+    <div class="unit-controls" id="unitControlsPanel">
+        <div class="unit-controls-header">
+            <span class="drag-handle">⚔️ UNIT COMMAND ⚔️</span>
+        </div>
+        <div class="unit-control-content">
+            <div class="unit-control-group">
+                <h4>Unit Controls:</h4>
+                <small>• Left click: Select unit</small>
+                <small>• Right click: Move selected unit</small>
+                <small>• Keys 1-5: Purchase units</small>
+                <small>  1: Light Infantry (Str:1, Move:1)</small>
+                <small>  2: Heavy Infantry (Str:2, Move:2)</small>
+                <small>  3: Light Mechanical (Str:3, Move:2)</small>
+                <small>  4: Heavy Mechanical (Str:4, Move:3)</small>
+                <small>  5: Artillery (Str:1, Move:2, Range:2)</small>
+            </div>
         </div>
     </div>
 
