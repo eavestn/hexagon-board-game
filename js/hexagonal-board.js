@@ -57,6 +57,19 @@ class HexagonalBoard {
         this.faction1 = 'german';
         this.faction2 = 'british';
         
+        // Resource management
+        this.faction1Resources = 0;
+        this.faction2Resources = 0;
+        
+        // Turn management system
+        this.currentYear = 1935;
+        this.currentMonth = 3; // March (1-12)
+        this.currentTurnInMonth = 1; // 1 or 2
+        this.currentSeason = 'Spring';
+        this.hasInitiative = Math.random() < 0.5 ? this.faction1 : this.faction2; // Random initial initiative
+        this.totalTurns = 0;
+        this.maxTurns = 264; // 11 years * 24 turns per year
+        
         // Compass properties
         this.compassX = 100;
         this.compassY = 100;
@@ -67,10 +80,105 @@ class HexagonalBoard {
         this.minCompassSize = 40;
         this.maxCompassSize = 150;
         
+        // Turn panel properties
+        this.turnPanelX = 0; // Will be set to top-right initially
+        this.turnPanelY = 20;
+        this.turnPanelWidth = 320;
+        this.turnPanelHeight = 180;
+        this.turnPanelDragging = false;
+        
+        // Ground texture
+        this.groundImage = null;
+        this.cityImage = null;
+        
         this.loadFactionImages();
+        this.loadGroundImage();
+        this.loadCityImage();
         this.initializeBoard();
         this.setupEventListeners();
         this.loadCompassPosition();
+        this.loadTurnPanelPosition();
+        this.updateSeasonFromDate();
+    }
+    
+    // Turn Management System
+    updateSeasonFromDate() {
+        if (this.currentMonth >= 3 && this.currentMonth <= 5) {
+            this.currentSeason = 'Spring';
+        } else if (this.currentMonth >= 6 && this.currentMonth <= 8) {
+            this.currentSeason = 'Summer';
+        } else if (this.currentMonth >= 9 && this.currentMonth <= 11) {
+            this.currentSeason = 'Fall';
+        } else {
+            this.currentSeason = 'Winter';
+        }
+    }
+    
+    getMonthName(monthNum) {
+        const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+        return months[monthNum];
+    }
+    
+    getCurrentTurnString() {
+        return `${this.currentYear} ${this.getMonthName(this.currentMonth)} Turn ${this.currentTurnInMonth}, ${this.currentSeason}`;
+    }
+    
+    advanceTurn() {
+        if (this.totalTurns >= this.maxTurns) {
+            alert('Game Over! The war has ended in February 1945.');
+            return false;
+        }
+        
+        this.totalTurns++;
+        
+        // Advance turn within month
+        if (this.currentTurnInMonth === 1) {
+            this.currentTurnInMonth = 2;
+        } else {
+            // Advance to next month
+            this.currentTurnInMonth = 1;
+            this.currentMonth++;
+            
+            // Handle year transition
+            if (this.currentMonth > 12) {
+                this.currentMonth = 1;
+                this.currentYear++;
+                
+                // Initiative alternates yearly
+                this.hasInitiative = this.hasInitiative === this.faction1 ? this.faction2 : this.faction1;
+            }
+            
+            this.updateSeasonFromDate();
+        }
+        
+        this.draw(); // Redraw to update UI
+        return true;
+    }
+    
+    resetToGameStart() {
+        this.currentYear = 1935;
+        this.currentMonth = 3;
+        this.currentTurnInMonth = 1;
+        this.totalTurns = 0;
+        this.hasInitiative = Math.random() < 0.5 ? this.faction1 : this.faction2;
+        this.updateSeasonFromDate();
+        this.draw();
+    }
+    
+    calculateResources() {
+        // Reset resource counters
+        this.faction1Resources = 0;
+        this.faction2Resources = 0;
+        
+        // Count resources from owned hexes
+        this.hexagons.forEach(hex => {
+            if (hex.owner === this.faction1) {
+                this.faction1Resources += hex.resourceValue;
+            } else if (hex.owner === this.faction2) {
+                this.faction2Resources += hex.resourceValue;
+            }
+        });
     }
     
     loadFactionImages() {
@@ -101,6 +209,30 @@ class HexagonalBoard {
         });
     }
     
+    loadGroundImage() {
+        const img = new Image();
+        img.onload = () => {
+            this.groundImage = img;
+            this.draw(); // Redraw when ground image loads
+        };
+        img.onerror = () => {
+            console.warn('Failed to load ground texture image');
+        };
+        img.src = 'assets/ground.png';
+    }
+    
+    loadCityImage() {
+        const img = new Image();
+        img.onload = () => {
+            this.cityImage = img;
+            this.draw(); // Redraw when city image loads
+        };
+        img.onerror = () => {
+            console.warn('Failed to load city texture image');
+        };
+        img.src = 'assets/city.png';
+    }
+    
     loadCompassPosition() {
         const savedPos = localStorage.getItem('compassPosition');
         if (savedPos) {
@@ -110,6 +242,18 @@ class HexagonalBoard {
             if (pos.size) {
                 this.compassSize = Math.max(this.minCompassSize, Math.min(this.maxCompassSize, pos.size));
             }
+        }
+    }
+    
+    loadTurnPanelPosition() {
+        const savedPos = localStorage.getItem('turnPanelPosition');
+        if (savedPos) {
+            const pos = JSON.parse(savedPos);
+            this.turnPanelX = pos.x;
+            this.turnPanelY = pos.y;
+        } else {
+            // Default to top-right corner
+            this.turnPanelX = this.canvas.width - this.turnPanelWidth - 20;
         }
     }
     
@@ -130,6 +274,9 @@ class HexagonalBoard {
         
         // Set up starting positions and distribute strategic hexes
         this.setupStartingPositions();
+        
+        // Calculate initial resources
+        this.calculateResources();
     }
     
     setupStartingPositions() {
@@ -156,22 +303,27 @@ class HexagonalBoard {
     
     distributeStrategicHexes() {
         const strategicHexes = this.hexagons.filter(h => h.isStrategic);
-        const numPerFaction = Math.floor(strategicHexes.length / 2);
+        const maxPerFaction = 3; // Maximum 3 strategic hexes per faction
+        
+        // Calculate how many each faction gets (max 3 each)
+        const totalToAssign = Math.min(strategicHexes.length, maxPerFaction * 2);
+        const faction1Count = Math.min(maxPerFaction, Math.floor(totalToAssign / 2));
+        const faction2Count = Math.min(maxPerFaction, totalToAssign - faction1Count);
         
         // Shuffle strategic hexes for random distribution
         const shuffled = [...strategicHexes].sort(() => Math.random() - 0.5);
         
-        // Assign to faction 1
-        for (let i = 0; i < numPerFaction; i++) {
+        // Assign to faction 1 (up to 3)
+        for (let i = 0; i < faction1Count; i++) {
             shuffled[i].owner = this.faction1;
         }
         
-        // Assign to faction 2
-        for (let i = numPerFaction; i < numPerFaction * 2; i++) {
+        // Assign to faction 2 (up to 3)
+        for (let i = faction1Count; i < faction1Count + faction2Count; i++) {
             shuffled[i].owner = this.faction2;
         }
         
-        // Remaining strategic hexes (if odd number) stay unowned
+        // All remaining strategic hexes stay unowned (must be captured)
     }
     
     placeStrategicHexes() {
@@ -224,14 +376,15 @@ class HexagonalBoard {
     }
     
     getHexDistance(hex1, hex2) {
-        // Convert offset coordinates to axial coordinates for accurate hex distance
-        const q1 = hex1.col - Math.floor(hex1.row / 2);
-        const r1 = hex1.row;
-        const q2 = hex2.col - Math.floor(hex2.row / 2);
-        const r2 = hex2.row;
+        // Simple euclidean distance approximation for hex spacing
+        // This is more reliable than complex hex math for spacing purposes
+        const dx = hex1.x - hex2.x;
+        const dy = hex1.y - hex2.y;
+        const euclideanDistance = Math.sqrt(dx * dx + dy * dy);
         
-        // Calculate axial distance (proper hex grid distance)
-        return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+        // Convert to approximate hex steps (each hex is roughly hexRadius * 1.5 apart)
+        const hexSteps = euclideanDistance / (this.config.hexRadius * 1.5);
+        return hexSteps;
     }
     
     createHexagon(row, col) {
@@ -273,48 +426,70 @@ class HexagonalBoard {
         
         this.ctx.closePath();
         
-        // Different styling based on ownership and strategic status
+        // Draw base texture first (ground for regular, city for strategic)
+        if (hex.isStrategic) {
+            // Strategic hex - use city texture or fallback to military olive-gold
+            this.ctx.strokeStyle = '#b8860b'; // Dark goldenrod border
+            this.ctx.lineWidth = 3;
+            
+            if (this.cityImage) {
+                this.ctx.save();
+                this.ctx.clip(); // Clip to hexagon shape
+                
+                const imgSize = radius * 2.2;
+                const imgX = x - imgSize / 2;
+                const imgY = y - imgSize / 2;
+                
+                this.ctx.globalAlpha = 0.85;
+                this.ctx.drawImage(this.cityImage, imgX, imgY, imgSize, imgSize);
+                this.ctx.restore();
+            } else {
+                this.ctx.fillStyle = '#8b7d3a'; // Military olive-gold
+                this.ctx.fill();
+            }
+        } else {
+            // Regular hex - use ground texture or fallback to neutral terrain
+            this.ctx.strokeStyle = '#4a5568';
+            this.ctx.lineWidth = 2;
+            
+            if (this.groundImage) {
+                this.ctx.save();
+                this.ctx.clip(); // Clip to hexagon shape
+                
+                const imgSize = radius * 2.2;
+                const imgX = x - imgSize / 2;
+                const imgY = y - imgSize / 2;
+                
+                this.ctx.globalAlpha = 0.8;
+                this.ctx.drawImage(this.groundImage, imgX, imgY, imgSize, imgSize);
+                this.ctx.restore();
+            } else {
+                this.ctx.fillStyle = '#68768a'; // Neutral gray terrain
+                this.ctx.fill();
+            }
+        }
+        
+        // Add faction flag overlay if hex is owned
         if (hex.owner) {
             const faction = FACTIONS[hex.owner];
             this.ctx.strokeStyle = faction.borderColor;
             this.ctx.lineWidth = 3;
             
-            // Use flag image as background if available
+            // Use flag image as overlay if available
             if (faction.flagImage) {
                 this.ctx.save();
                 this.ctx.clip(); // Clip to hexagon shape
                 
-                // Scale image to completely fill the hexagon (with overflow hidden by clip)
-                const imgSize = radius * 2.2; // Larger size to ensure full coverage
+                // Scale image to completely fill the hexagon
+                const imgSize = radius * 2.2;
                 const imgX = x - imgSize / 2;
                 const imgY = y - imgSize / 2;
                 
-                // Add transparency overlay for strategic vs regular hexes
-                this.ctx.globalAlpha = hex.isStrategic ? 0.9 : 0.7;
+                // Low opacity overlay - shows base texture underneath
+                this.ctx.globalAlpha = hex.isStrategic ? 0.4 : 0.3; // Lower opacity for overlay effect
                 this.ctx.drawImage(faction.flagImage, imgX, imgY, imgSize, imgSize);
                 this.ctx.restore();
-            } else {
-                // Fallback to solid colors if image not loaded
-                if (hex.isStrategic) {
-                    // Owned strategic hex - military base style
-                    this.ctx.fillStyle = faction.color + 'cc'; // Less transparency for strategic
-                } else {
-                    // Owned regular hex - occupied territory
-                    this.ctx.fillStyle = faction.color + '77'; // More transparency
-                }
-                this.ctx.fill();
             }
-        } else if (hex.isStrategic) {
-            // Unowned strategic hex - neutral military installation
-            this.ctx.strokeStyle = '#b8860b'; // Dark goldenrod border
-            this.ctx.lineWidth = 3;
-            this.ctx.fillStyle = '#8b7d3a'; // Military olive-gold
-        } else {
-            // Unowned regular hex - neutral terrain
-            this.ctx.strokeStyle = '#4a5568';
-            this.ctx.lineWidth = 2;
-            this.ctx.fillStyle = '#68768a'; // Neutral gray terrain
-            this.ctx.fill();
         }
         
         this.ctx.stroke();
@@ -334,10 +509,16 @@ class HexagonalBoard {
         // Add strategic indicator for strategic hexes
         if (hex.isStrategic) {
             this.ctx.fillStyle = '#f6ad55'; // Military gold/orange
-            this.ctx.font = 'bold 14px monospace';
-            this.ctx.fillText('◆', x, y + 20); // Diamond for strategic sites
+            this.ctx.strokeStyle = '#1a202c'; // Dark outline for contrast
+            this.ctx.lineWidth = 2;
+            this.ctx.font = 'bold 24px "Font Awesome 6 Free"';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.strokeText('\uf005', x, y + 20); // FA solid star
+            this.ctx.fillText('\uf005', x, y + 20); // FA solid star
         }
     }
+    
     
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -355,6 +536,9 @@ class HexagonalBoard {
         // Draw north indicator
         this.drawNorthIndicator();
         this.drawCompassResizeHandle();
+        
+        // Draw turn information on canvas
+        this.drawTurnInfo();
         
         document.getElementById('hexCount').textContent = this.hexagons.length;
     }
@@ -403,7 +587,7 @@ class HexagonalBoard {
             const y = this.compassY + Math.sin(dir.angle) * (this.compassSize / 2 - 18);
             
             this.ctx.fillStyle = dir.color;
-            this.ctx.font = 'bold 14px monospace';
+            this.ctx.font = 'bold 16px monospace';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(dir.label, x, y);
@@ -488,6 +672,90 @@ class HexagonalBoard {
         }
     }
     
+    drawTurnInfo() {
+        this.ctx.save();
+        
+        // Use draggable position
+        const x = this.turnPanelX + this.turnPanelWidth;
+        const y = this.turnPanelY;
+        
+        // Drag state styling
+        const isDragging = this.turnPanelDragging;
+        const panelBg = isDragging ? 'rgba(229, 62, 62, 0.95)' : 'rgba(26, 32, 44, 0.95)';
+        const panelBorder = isDragging ? '#e53e3e' : '#4a5568';
+        const borderWidth = isDragging ? 3 : 2;
+        
+        // Background panel
+        this.ctx.fillStyle = panelBg;
+        this.ctx.strokeStyle = panelBorder;
+        this.ctx.lineWidth = borderWidth;
+        this.ctx.fillRect(this.turnPanelX, y, this.turnPanelWidth, this.turnPanelHeight);
+        this.ctx.strokeRect(this.turnPanelX, y, this.turnPanelWidth, this.turnPanelHeight);
+        
+        // Turn information text
+        this.ctx.fillStyle = '#f7fafc';
+        this.ctx.font = 'bold 16px monospace';
+        this.ctx.textAlign = 'right';
+        
+        // Current turn
+        this.ctx.fillText(this.getCurrentTurnString(), x - 10, y + 25);
+        
+        // Turn counter
+        this.ctx.font = 'bold 14px monospace';
+        this.ctx.fillText(`Turn ${this.totalTurns + 1} of ${this.maxTurns}`, x - 10, y + 45);
+        
+        // Initiative
+        const initiativeFaction = FACTIONS[this.hasInitiative];
+        this.ctx.fillStyle = '#f6ad55';
+        this.ctx.fillText(`Initiative: ${initiativeFaction.name}`, x - 10, y + 65);
+        
+        // Progress bar
+        const progressBarWidth = this.turnPanelWidth - 20;
+        const progressBarHeight = 8;
+        const progressBarX = this.turnPanelX + 10;
+        const progressBarY = y + 80;
+        
+        // Progress background
+        this.ctx.fillStyle = '#2d3748';
+        this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+        
+        // Progress fill
+        const progress = this.totalTurns / this.maxTurns;
+        this.ctx.fillStyle = '#4299e1';
+        this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
+        
+        // Progress border
+        this.ctx.strokeStyle = '#4a5568';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+        
+        // War progress text
+        this.ctx.fillStyle = '#cbd5e0';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText(`War Progress: ${Math.round(progress * 100)}%`, x - 10, y + 105);
+        
+        // Resource counters
+        this.ctx.fillStyle = '#f7fafc';
+        this.ctx.font = 'bold 14px monospace';
+        
+        // Faction 1 resources
+        const faction1Info = FACTIONS[this.faction1];
+        this.ctx.fillStyle = faction1Info.borderColor;
+        this.ctx.fillText(`${faction1Info.name}: ${this.faction1Resources} Resources`, x - 10, y + 130);
+        
+        // Faction 2 resources
+        const faction2Info = FACTIONS[this.faction2];
+        this.ctx.fillStyle = faction2Info.borderColor;
+        this.ctx.fillText(`${faction2Info.name}: ${this.faction2Resources} Resources`, x - 10, y + 150);
+        
+        this.ctx.restore();
+    }
+    
+    isPointInTurnPanel(x, y) {
+        return x >= this.turnPanelX && x <= this.turnPanelX + this.turnPanelWidth &&
+               y >= this.turnPanelY && y <= this.turnPanelY + this.turnPanelHeight;
+    }
+    
     setupEventListeners() {
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
@@ -520,8 +788,13 @@ class HexagonalBoard {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             
-            // Check if clicking on compass resize handle first
-            if (this.isPointInCompassResizeHandle(mouseX, mouseY)) {
+            // Check if clicking on turn panel first
+            if (this.isPointInTurnPanel(mouseX, mouseY)) {
+                this.turnPanelDragging = true;
+                this.lastMouseX = mouseX;
+                this.lastMouseY = mouseY;
+                this.canvas.style.cursor = 'grabbing';
+            } else if (this.isPointInCompassResizeHandle(mouseX, mouseY)) {
                 this.compassResizing = true;
                 this.lastMouseX = mouseX;
                 this.lastMouseY = mouseY;
@@ -544,7 +817,18 @@ class HexagonalBoard {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             
-            if (this.compassResizing) {
+            if (this.turnPanelDragging) {
+                const deltaX = mouseX - this.lastMouseX;
+                const deltaY = mouseY - this.lastMouseY;
+                this.turnPanelX += deltaX;
+                this.turnPanelY += deltaY;
+                
+                // Keep turn panel within canvas bounds
+                this.turnPanelX = Math.max(0, Math.min(this.canvas.width - this.turnPanelWidth, this.turnPanelX));
+                this.turnPanelY = Math.max(0, Math.min(this.canvas.height - this.turnPanelHeight, this.turnPanelY));
+                
+                this.draw();
+            } else if (this.compassResizing) {
                 const deltaX = mouseX - this.lastMouseX;
                 const deltaY = mouseY - this.lastMouseY;
                 
@@ -590,7 +874,17 @@ class HexagonalBoard {
         });
         
         this.canvas.addEventListener('mouseup', () => {
-            if (this.compassResizing) {
+            if (this.turnPanelDragging) {
+                this.turnPanelDragging = false;
+                this.canvas.style.cursor = '';
+                this.draw(); // Redraw to remove drag state styling
+                
+                // Save turn panel position
+                localStorage.setItem('turnPanelPosition', JSON.stringify({
+                    x: this.turnPanelX,
+                    y: this.turnPanelY
+                }));
+            } else if (this.compassResizing) {
                 this.compassResizing = false;
                 this.canvas.style.cursor = '';
                 this.draw(); // Redraw to remove resize state styling
@@ -619,7 +913,11 @@ class HexagonalBoard {
         });
         
         this.canvas.addEventListener('mouseleave', () => {
-            if (this.compassResizing) {
+            if (this.turnPanelDragging) {
+                this.turnPanelDragging = false;
+                this.canvas.style.cursor = '';
+                this.draw();
+            } else if (this.compassResizing) {
                 this.compassResizing = false;
                 this.canvas.style.cursor = '';
                 this.draw();
@@ -652,6 +950,7 @@ window.board = board; // Make board globally accessible for resize handler
 
 function drawBoard() {
     board.initializeBoard(); // Regenerate the entire board
+    board.calculateResources(); // Recalculate resources after board generation
     board.draw();
     updateZoomDisplay();
 }
@@ -670,6 +969,21 @@ function resetView() {
 
 function updateZoomDisplay() {
     document.getElementById('zoomLevel').textContent = Math.round(board.scale * 100) + '%';
+}
+
+function updateTurnDisplay() {
+    document.getElementById('currentTurn').textContent = board.getCurrentTurnString();
+}
+
+function advanceTurn() {
+    if (board.advanceTurn()) {
+        updateTurnDisplay();
+    }
+}
+
+function resetGame() {
+    board.resetToGameStart();
+    updateTurnDisplay();
 }
 
 canvas.addEventListener('click', function(event) {
@@ -712,6 +1026,7 @@ function updateFactions() {
     board.faction1 = faction1;
     board.faction2 = faction2;
     board.setupStartingPositions();
+    board.calculateResources();
     board.draw();
 }
 
@@ -877,6 +1192,74 @@ function initDraggableControls() {
     }
 }
 
+// Draggable turn controls functionality
+function initDraggableTurnControls() {
+    const turnControlsPanel = document.getElementById('turnControlsPanel');
+    const dragHandle = turnControlsPanel.querySelector('.drag-handle');
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    
+    dragHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = turnControlsPanel.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+        
+        // Change cursor and add visual feedback
+        document.body.style.cursor = 'grabbing';
+        turnControlsPanel.style.transition = 'none';
+        turnControlsPanel.classList.add('dragging');
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        let newX = e.clientX - dragOffset.x;
+        let newY = e.clientY - dragOffset.y;
+        
+        // Constrain to viewport bounds
+        const panelRect = turnControlsPanel.getBoundingClientRect();
+        const maxX = window.innerWidth - panelRect.width;
+        const maxY = window.innerHeight - panelRect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        turnControlsPanel.style.left = newX + 'px';
+        turnControlsPanel.style.top = newY + 'px';
+        turnControlsPanel.style.bottom = 'auto';
+        turnControlsPanel.style.right = 'auto';
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            turnControlsPanel.style.transition = '';
+            turnControlsPanel.classList.remove('dragging');
+            
+            // Save position to localStorage
+            const rect = turnControlsPanel.getBoundingClientRect();
+            localStorage.setItem('turnControlsPosition', JSON.stringify({
+                left: rect.left,
+                top: rect.top
+            }));
+        }
+    });
+    
+    // Load saved position
+    const savedPosition = localStorage.getItem('turnControlsPosition');
+    if (savedPosition) {
+        const pos = JSON.parse(savedPosition);
+        turnControlsPanel.style.left = pos.left + 'px';
+        turnControlsPanel.style.top = pos.top + 'px';
+        turnControlsPanel.style.bottom = 'auto';
+        turnControlsPanel.style.right = 'auto';
+    }
+}
+
 // Draggable title functionality
 function initDraggableTitle() {
     const gameTitle = document.getElementById('gameTitle');
@@ -944,5 +1327,7 @@ function initDraggableTitle() {
 
 drawBoard();
 updateZoomDisplay();
+updateTurnDisplay();
 initDraggableControls();
+initDraggableTurnControls();
 initDraggableTitle();

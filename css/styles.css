@@ -89,7 +89,7 @@ h1.dragging {
 }
 
 .drag-handle {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
     letter-spacing: 2px;
     cursor: move;
@@ -310,4 +310,103 @@ button:active {
 .controls.collapsed::after,
 .controls.collapsed::before {
     display: none;
+}
+
+/* Turn Controls Panel */
+.turn-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    border: 2px solid #4a5568;
+    padding: 0;
+    border-radius: 5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    color: #f7fafc;
+    font-family: 'Courier New', monospace;
+    user-select: none;
+    min-width: 280px;
+}
+
+.turn-controls-header {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    padding: 8px 15px;
+    border-bottom: 2px solid #4a5568;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 3px 3px 0 0;
+}
+
+.turn-controls .drag-handle {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: move;
+    color: #cbd5e0;
+    text-align: center;
+    padding: 2px 0;
+}
+
+.turn-controls .drag-handle:hover {
+    color: #f7fafc;
+}
+
+.turn-control-content {
+    padding: 15px;
+}
+
+.turn-control-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    justify-content: center;
+}
+
+.turn-control-group button {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 14px;
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border: 2px solid #718096;
+    border-radius: 3px;
+    cursor: pointer;
+    color: #f7fafc;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+}
+
+.turn-control-group button:hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+    border-color: #fc8181;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+    transform: translateY(-1px);
+}
+
+.turn-control-group button:active {
+    transform: translateY(0);
+}
+
+.turn-display {
+    text-align: center;
+    font-size: 12px;
+    color: #cbd5e0;
+    font-weight: bold;
+}
+
+.turn-controls.dragging {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    border-color: #e53e3e;
+}
+
+.turn-controls.dragging .turn-controls-header {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+.turn-controls.dragging .drag-handle {
+    color: #f7fafc;
 }

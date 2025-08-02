@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WWII Strategic Command</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -55,6 +56,22 @@
             <span>Scale: <span id="zoomLevel">100%</span></span>
             <span> | Sectors: <span id="hexCount">0</span></span>
         </div>
+        </div>
+    </div>
+
+    <!-- Turn Controls Panel -->
+    <div class="turn-controls" id="turnControlsPanel">
+        <div class="turn-controls-header">
+            <span class="drag-handle">⏰ TURN CONTROL ⏰</span>
+        </div>
+        <div class="turn-control-content">
+            <div class="turn-control-group">
+                <button onclick="advanceTurn()">⏭️ Next Turn</button>
+                <button onclick="resetGame()">🔄 Reset War</button>
+            </div>
+            <div class="turn-display">
+                <span>Turn: <span id="currentTurn">1935 March Turn 1, Spring</span></span>
+            </div>
         </div>
     </div>
 

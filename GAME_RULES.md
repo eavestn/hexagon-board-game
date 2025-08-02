@@ -45,10 +45,11 @@ A turn-based hexagonal strategy game simulating World War II conflict between ma
    - The other faction starts at the bottom-right corner
 
 ### Starting Strategic Hex Distribution
-1. **Even Distribution:** Strategic hexes are divided evenly between the two factions
+1. **Limited Allocation:** Each faction receives a maximum of 3 strategic hexes at game start
 2. **Random Assignment:** Each faction receives their strategic hexes randomly distributed
-3. **Leftover Hex:** If there's an odd number of strategic hexes, one remains unowned
-4. **No Choice:** Factions do not choose their assigned strategic hexes
+3. **Unoccupied Cities:** Additional strategic hexes beyond the 6 allocated (3 per faction) remain unowned
+4. **Capture Required:** Unoccupied strategic hexes must be captured through gameplay
+5. **No Choice:** Factions do not choose their assigned strategic hexes
 
 ### Starting Unit Placement
 Each faction begins with **1 Unit** that must be placed in either:
@@ -294,11 +295,12 @@ The game spans the buildup to and duration of World War II, allowing players to 
 
 ### Starting Game State Summary
 1. **Board Setup:** Two factions at opposite corners
-2. **Strategic Hex Ownership:** Evenly distributed (leftover unowned if odd number)
+2. **Strategic Hex Ownership:** Maximum 3 per faction (additional strategic hexes remain unowned)
 3. **Starting Units:** Each faction has 1 unit placed at corner or owned strategic hex
-4. **Initial Resources:** Generated from owned hexes (corner + strategic hexes)
-5. **All Other Hexes:** Begin unowned and must be captured through gameplay
+4. **Initial Resources:** Generated from owned hexes (corner + up to 3 strategic hexes)
+5. **Unoccupied Cities:** Strategic hexes beyond the initial 6 allocation remain neutral until captured
+6. **All Other Hexes:** Begin unowned and must be captured through gameplay
 
 ---
 
-*Game Rules Version 1.2 - Updated with Starting Positions and Strategic Hex Distribution*
+*Game Rules Version 1.3 - Updated with Limited Strategic Hex Allocation*
