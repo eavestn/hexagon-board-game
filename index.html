@@ -29,6 +29,9 @@
             
             <label for="strategicHexes">Objectives:</label>
             <input type="number" id="strategicHexes" min="0" max="10" value="4" onchange="updateBoardConfig()">
+            
+            <label for="waterDensity">Water %:</label>
+            <input type="number" id="waterDensity" min="0" max="30" value="0" onchange="updateBoardConfig()">
         </div>
         
         <div class="control-group">
@@ -63,6 +66,12 @@
             <small>• Right click: Move selected unit</small>
             <small>• Keys 1-5: Purchase units (Light Infantry, Heavy Infantry, Light Mechanical, Heavy Mechanical, Artillery)</small>
         </div>
+        
+        <div class="control-group resource-display">
+            <h4>Faction Resources:</h4>
+            <div id="faction1ResourceDisplay">Army Alpha: 0 Resources</div>
+            <div id="faction2ResourceDisplay">Army Beta: 0 Resources</div>
+        </div>
         </div>
     </div>
 
@@ -70,18 +79,70 @@
     <div class="unit-controls" id="unitControlsPanel">
         <div class="unit-controls-header">
             <span class="drag-handle">⚔️ UNIT COMMAND ⚔️</span>
+            <button class="toggle-controls" onclick="toggleUnitControls()">⚙️</button>
         </div>
         <div class="unit-control-content">
             <div class="unit-control-group">
-                <h4>Unit Controls:</h4>
+                <h4>Controls:</h4>
                 <small>• Left click: Select unit</small>
                 <small>• Right click: Move selected unit</small>
                 <small>• Keys 1-5: Purchase units</small>
-                <small>  1: Light Infantry (Str:1, Move:1)</small>
-                <small>  2: Heavy Infantry (Str:2, Move:2)</small>
-                <small>  3: Light Mechanical (Str:3, Move:2)</small>
-                <small>  4: Heavy Mechanical (Str:4, Move:3)</small>
-                <small>  5: Artillery (Str:1, Move:2, Range:2)</small>
+                
+                <h4 style="margin-top: 15px;">Unit Types:</h4>
+                <table class="unit-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Unit Type</th>
+                            <th>Str</th>
+                            <th>HP</th>
+                            <th>Move</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Light Infantry</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Heavy Infantry</td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td>2</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Light Mechanical</td>
+                            <td>3</td>
+                            <td>1</td>
+                            <td>2</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Heavy Mechanical</td>
+                            <td>4</td>
+                            <td>2</td>
+                            <td>3</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Artillery</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>2</td>
+                            <td>3</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

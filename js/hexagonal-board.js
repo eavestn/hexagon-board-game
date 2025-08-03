@@ -204,10 +204,12 @@ class HexagonalBoard {
         // Ground texture
         this.groundImage = null;
         this.cityImage = null;
+        this.waterImage = null;
         
         this.loadFactionImages();
         this.loadGroundImage();
         this.loadCityImage();
+        this.loadWaterImage();
         this.initializeBoard();
         this.setupEventListeners();
         this.loadCompassPosition();
@@ -350,6 +352,18 @@ class HexagonalBoard {
         img.src = 'assets/city.png';
     }
     
+    loadWaterImage() {
+        const img = new Image();
+        img.onload = () => {
+            this.waterImage = img;
+            this.draw(); // Redraw when water image loads
+        };
+        img.onerror = () => {
+            console.warn('Failed to load water texture image');
+        };
+        img.src = 'assets/water.png';
+    }
+    
     loadCompassPosition() {
         const savedPos = localStorage.getItem('compassPosition');
         if (savedPos) {
@@ -388,6 +402,9 @@ class HexagonalBoard {
         
         // Place strategic hexes
         this.placeStrategicHexes();
+        
+        // Place water hexes (optional)
+        this.placeWaterHexes();
         
         // Set up starting positions and distribute strategic hexes
         this.setupStartingPositions();
@@ -458,8 +475,12 @@ class HexagonalBoard {
     placeStrategicHexes() {
         const numStrategic = parseInt(document.getElementById('strategicHexes').value) || 4;
         
-        // Reset all hexes to non-strategic
-        this.hexagons.forEach(hex => hex.isStrategic = false);
+        // Reset all hexes to non-strategic and non-water
+        this.hexagons.forEach(hex => {
+            hex.isStrategic = false;
+            hex.isWater = false;
+            hex.resourceValue = 2; // Reset to default
+        });
         
         if (numStrategic > 0 && this.hexagons.length > 0) {
             const placedIndices = [];
@@ -504,18 +525,134 @@ class HexagonalBoard {
         }
     }
     
+    placeWaterHexes() {
+        const waterDensity = parseFloat(document.getElementById('waterDensity')?.value) || 0;
+        
+        if (waterDensity <= 0) return; // No water if density is 0
+        
+        // Calculate how many hexes should be water
+        const totalHexes = this.hexagons.length;
+        const waterHexCount = Math.floor(totalHexes * (waterDensity / 100));
+        
+        if (waterHexCount === 0) return;
+        
+        // Generate water areas using a seeded approach for realistic patterns
+        const waterAreas = this.generateWaterAreas(waterHexCount);
+        
+        // Mark hexes as water (but avoid corners and strategic hexes)
+        waterAreas.forEach(hexIndex => {
+            if (hexIndex < this.hexagons.length) {
+                const hex = this.hexagons[hexIndex];
+                
+                // Don't place water on corner hexes (starting positions)
+                const isCorner = (hex.row === 0 && hex.col === 0) || 
+                                (hex.row === Math.max(...this.hexagons.map(h => h.row)) && 
+                                 hex.col === Math.max(...this.hexagons.filter(h => h.row === hex.row).map(h => h.col)));
+                
+                if (!isCorner && !hex.isStrategic) {
+                    hex.isWater = true;
+                    hex.resourceValue = 0; // Water hexes give no resources
+                    hex.isStrategic = false; // Water can't be strategic
+                }
+            }
+        });
+    }
+    
+    generateWaterAreas(targetCount) {
+        const waterHexes = [];
+        const numSeeds = Math.max(1, Math.floor(targetCount / 8)); // Create 1-3 water bodies
+        
+        // Create seed points for water bodies
+        for (let i = 0; i < numSeeds; i++) {
+            const seedIndex = Math.floor(Math.random() * this.hexagons.length);
+            waterHexes.push(seedIndex);
+        }
+        
+        // Grow water areas from seed points
+        const remainingCount = targetCount - waterHexes.length;
+        const growthPerSeed = Math.floor(remainingCount / numSeeds);
+        
+        waterHexes.forEach(seedIndex => {
+            this.growWaterArea(seedIndex, growthPerSeed, waterHexes);
+        });
+        
+        return waterHexes;
+    }
+    
+    growWaterArea(seedIndex, maxGrowth, existingWater) {
+        const seed = this.hexagons[seedIndex];
+        if (!seed) return;
+        
+        const toProcess = [seedIndex];
+        let grown = 0;
+        
+        while (toProcess.length > 0 && grown < maxGrowth) {
+            const currentIndex = toProcess.shift();
+            const neighbors = this.getHexNeighbors(currentIndex);
+            
+            // Randomly select some neighbors to expand to
+            const shuffledNeighbors = neighbors.sort(() => Math.random() - 0.5);
+            const expansionCount = Math.min(2, shuffledNeighbors.length);
+            
+            for (let i = 0; i < expansionCount && grown < maxGrowth; i++) {
+                const neighborIndex = shuffledNeighbors[i];
+                if (!existingWater.includes(neighborIndex)) {
+                    existingWater.push(neighborIndex);
+                    toProcess.push(neighborIndex);
+                    grown++;
+                }
+            }
+        }
+    }
+    
+    getHexNeighbors(hexIndex) {
+        const hex = this.hexagons[hexIndex];
+        if (!hex) return [];
+        
+        const neighbors = [];
+        const { row, col } = hex;
+        const isEvenRow = row % 2 === 0;
+        
+        // Define neighbor offsets for hex grid (flat-top orientation)
+        const neighborOffsets = isEvenRow ? [
+            [-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]
+        ] : [
+            [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]
+        ];
+        
+        neighborOffsets.forEach(([dRow, dCol]) => {
+            const neighborRow = row + dRow;
+            const neighborCol = col + dCol;
+            
+            const neighborIndex = this.hexagons.findIndex(h => 
+                h.row === neighborRow && h.col === neighborCol
+            );
+            
+            if (neighborIndex !== -1) {
+                neighbors.push(neighborIndex);
+            }
+        });
+        
+        return neighbors;
+    }
+    
     getHexDistance(hex1, hex2) {
-        // Convert offset coordinates to axial coordinates for proper hex distance
-        const q1 = hex1.col - Math.floor(hex1.row / 2);
-        const r1 = hex1.row;
-        const q2 = hex2.col - Math.floor(hex2.row / 2);
-        const r2 = hex2.row;
+        // Convert offset coordinates to cube coordinates for accurate hex distance
+        const cube1 = this.offsetToCube(hex1.row, hex1.col);
+        const cube2 = this.offsetToCube(hex2.row, hex2.col);
         
-        // Calculate hex distance using axial coordinates
-        const hexDistance = (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+        // Calculate hex distance using cube coordinate formula
+        const hexDistance = (Math.abs(cube1.x - cube2.x) + Math.abs(cube1.y - cube2.y) + Math.abs(cube1.z - cube2.z)) / 2;
         
-        console.log(`Hex distance from (${hex1.row},${hex1.col}) to (${hex2.row},${hex2.col}): ${hexDistance}`);
-        return hexDistance;
+        return Math.floor(hexDistance);
+    }
+    
+    offsetToCube(row, col) {
+        // Convert offset coordinates to cube coordinates for flat-top hexagons
+        const x = col - Math.floor(row / 2);
+        const z = row;
+        const y = -x - z;
+        return { x, y, z };
     }
     
     createHexagon(row, col) {
@@ -533,8 +670,9 @@ class HexagonalBoard {
             y: y,
             radius: this.config.hexRadius,
             isStrategic: false,
+            isWater: false,
             owner: null,
-            resourceValue: 2, // Default resource value (will be 4 for strategic hexes)
+            resourceValue: 2, // Default resource value (will be 4 for strategic hexes, 0 for water)
             units: [] // Array of unit IDs on this hex
         };
     }
@@ -625,11 +763,7 @@ class HexagonalBoard {
     // Movement system
     calculateMovementCost(unit, fromHex, toHex) {
         const distance = this.getHexDistance(fromHex, toHex);
-        const hexesToMove = Math.round(distance);
-        let baseCost = unit.movementCost * hexesToMove;
-        
-        // Debug distance calculation
-        console.log(`Distance calculation: euclidean=${distance.toFixed(2)}, hexesToMove=${hexesToMove}, unitMoveCost=${unit.movementCost}`);
+        let baseCost = unit.movementCost * distance;
         
         // Group movement penalty: +1 resource if moving away from unit group
         const unitsOnStartHex = this.getUnitsOnHex(fromHex);
@@ -637,10 +771,8 @@ class HexagonalBoard {
         
         if (hasOtherUnits) {
             baseCost += 1; // Group movement penalty
-            console.log(`Group movement penalty applied: +1`);
         }
         
-        console.log(`Total movement cost: ${baseCost}`);
         return baseCost;
     }
     
@@ -648,6 +780,7 @@ class HexagonalBoard {
         if (!unit || !unit.canAct()) return false;
         if (!targetHex) return false;
         if (unit.hex === targetHex) return false;
+        if (targetHex.isWater) return false; // Cannot move into water hexes
         
         const faction = unit.faction;
         const currentResources = faction === this.faction1 ? this.faction1Resources : this.faction2Resources;
@@ -759,8 +892,28 @@ class HexagonalBoard {
         
         this.ctx.closePath();
         
-        // Draw base texture first (ground for regular, city for strategic)
-        if (hex.isStrategic) {
+        // Draw base texture first (water, ground for regular, city for strategic)
+        if (hex.isWater) {
+            // Water hex - use water texture or fallback to blue
+            this.ctx.strokeStyle = '#4682b4'; // Water blue border
+            this.ctx.lineWidth = 3;
+            
+            if (this.waterImage) {
+                this.ctx.save();
+                this.ctx.clip(); // Clip to hexagon shape
+                
+                const imgSize = radius * 2.2;
+                const imgX = x - imgSize / 2;
+                const imgY = y - imgSize / 2;
+                
+                this.ctx.globalAlpha = 0.9;
+                this.ctx.drawImage(this.waterImage, imgX, imgY, imgSize, imgSize);
+                this.ctx.restore();
+            } else {
+                this.ctx.fillStyle = '#4682b4'; // Water blue
+                this.ctx.fill();
+            }
+        } else if (hex.isStrategic) {
             // Strategic hex - use city texture or fallback to military olive-gold
             this.ctx.strokeStyle = '#b8860b'; // Dark goldenrod border
             this.ctx.lineWidth = 3;
@@ -827,6 +980,46 @@ class HexagonalBoard {
         
         this.ctx.stroke();
         
+        // Draw movement indicator if this hex is a valid movement target
+        if (this.selectedUnit && this.selectedUnit.canAct() && 
+            this.selectedUnit.faction === this.currentTurn && 
+            hex !== this.selectedUnit.hex && !hex.isWater) {
+            
+            const movementCost = this.calculateMovementCost(this.selectedUnit, this.selectedUnit.hex, hex);
+            const currentResources = this.selectedUnit.faction === this.faction1 ? 
+                this.faction1Resources : this.faction2Resources;
+            
+            if (currentResources >= movementCost) {
+                // Valid movement target - draw green overlay
+                this.ctx.save();
+                this.ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i + (Math.PI / 6);
+                    const hexX = x + radius * Math.cos(angle);
+                    const hexY = y + radius * Math.sin(angle);
+                    if (i === 0) {
+                        this.ctx.moveTo(hexX, hexY);
+                    } else {
+                        this.ctx.lineTo(hexX, hexY);
+                    }
+                }
+                this.ctx.closePath();
+                
+                // Green overlay for valid moves
+                this.ctx.fillStyle = 'rgba(72, 187, 120, 0.3)';
+                this.ctx.fill();
+                
+                // Draw movement cost
+                this.ctx.fillStyle = '#1a202c';
+                this.ctx.fillRect(x - 20, y - 30, 40, 20);
+                this.ctx.fillStyle = '#48bb78';
+                this.ctx.font = 'bold 14px monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`-${movementCost}`, x, y - 16);
+                this.ctx.restore();
+            }
+        }
+        
         this.ctx.fillStyle = '#f7fafc'; // Light text for contrast
         this.ctx.textAlign = 'center';
         
@@ -850,6 +1043,11 @@ class HexagonalBoard {
             this.ctx.strokeText('\uf005', x, y + 20); // FA solid star
             this.ctx.fillText('\uf005', x, y + 20); // FA solid star
         }
+        
+        // Add brown border to all hexes
+        this.ctx.strokeStyle = '#c4b5a0'; // Light brown tone
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
         
         // Draw units on this hex
         this.drawUnitsOnHex(hex);
@@ -922,6 +1120,19 @@ class HexagonalBoard {
     }
     
     
+    updateResourceDisplays() {
+        const faction1Display = document.getElementById('faction1ResourceDisplay');
+        const faction2Display = document.getElementById('faction2ResourceDisplay');
+        
+        if (faction1Display && faction2Display) {
+            const faction1Info = FACTIONS[this.faction1];
+            const faction2Info = FACTIONS[this.faction2];
+            
+            faction1Display.textContent = `${faction1Info.name}: ${this.faction1Resources} Resources`;
+            faction2Display.textContent = `${faction2Info.name}: ${this.faction2Resources} Resources`;
+        }
+    }
+    
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -943,6 +1154,9 @@ class HexagonalBoard {
         this.drawTurnInfo();
         
         document.getElementById('hexCount').textContent = this.hexagons.length;
+        
+        // Update resource displays
+        this.updateResourceDisplays();
     }
     
     drawNorthIndicator() {
@@ -1081,78 +1295,113 @@ class HexagonalBoard {
         const x = this.turnPanelX + this.turnPanelWidth;
         const y = this.turnPanelY;
         
-        // Drag state styling
+        // Drag state styling with papery aesthetic
         const isDragging = this.turnPanelDragging;
-        const panelBg = isDragging ? 'rgba(229, 62, 62, 0.95)' : 'rgba(26, 32, 44, 0.95)';
-        const panelBorder = isDragging ? '#e53e3e' : '#4a5568';
+        const panelBg = isDragging ? 'rgba(240, 230, 210, 0.98)' : 'rgba(244, 241, 234, 0.95)';
+        const panelBorder = isDragging ? '#8b7355' : '#8b7355';
         const borderWidth = isDragging ? 3 : 2;
         
-        // Background panel
-        this.ctx.fillStyle = panelBg;
+        // Create papery background with gradient
+        const gradient = this.ctx.createLinearGradient(this.turnPanelX, y, this.turnPanelX, y + this.turnPanelHeight);
+        gradient.addColorStop(0, '#f4f1ea');
+        gradient.addColorStop(0.25, '#ede6d3');
+        gradient.addColorStop(0.5, '#e3d5b7');
+        gradient.addColorStop(0.75, '#d9c7a3');
+        gradient.addColorStop(1, '#cdb896');
+        
+        // Background panel with rounded corners effect
+        this.ctx.fillStyle = gradient;
         this.ctx.strokeStyle = panelBorder;
         this.ctx.lineWidth = borderWidth;
+        this.ctx.shadowColor = 'rgba(139, 115, 85, 0.4)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 2;
+        
         this.ctx.fillRect(this.turnPanelX, y, this.turnPanelWidth, this.turnPanelHeight);
+        this.ctx.shadowBlur = 0; // Reset shadow
         this.ctx.strokeRect(this.turnPanelX, y, this.turnPanelWidth, this.turnPanelHeight);
         
-        // Turn information text
-        this.ctx.fillStyle = '#f7fafc';
-        this.ctx.font = 'bold 16px monospace';
+        // Inner highlight for paper effect
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(this.turnPanelX + 1, y + 1, this.turnPanelWidth - 2, this.turnPanelHeight - 2);
+        
+        // Turn information text with papery styling
+        this.ctx.fillStyle = '#4a3728';
+        this.ctx.font = 'bold 18px Georgia, serif';
         this.ctx.textAlign = 'right';
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.shadowBlur = 1;
+        this.ctx.shadowOffsetX = 1;
+        this.ctx.shadowOffsetY = 1;
         
         // Current turn
-        this.ctx.fillText(this.getCurrentTurnString(), x - 10, y + 25);
+        this.ctx.fillText(this.getCurrentTurnString(), x - 15, y + 30);
         
         // Turn counter
-        this.ctx.font = 'bold 14px monospace';
-        this.ctx.fillText(`Turn ${this.totalTurns + 1} of ${this.maxTurns}`, x - 10, y + 45);
+        this.ctx.font = 'bold 16px Georgia, serif';
+        this.ctx.fillText(`Turn ${this.totalTurns + 1} of ${this.maxTurns}`, x - 15, y + 50);
         
-        // Initiative
+        // Initiative with decorative styling
         const initiativeFaction = FACTIONS[this.hasInitiative];
-        this.ctx.fillStyle = '#f6ad55';
-        this.ctx.fillText(`Initiative: ${initiativeFaction.name}`, x - 10, y + 65);
+        this.ctx.fillStyle = '#8b7355';
+        this.ctx.font = 'bold 16px Georgia, serif';
+        this.ctx.fillText(`Initiative: ${initiativeFaction.name}`, x - 15, y + 70);
         
-        // Progress bar
-        const progressBarWidth = this.turnPanelWidth - 20;
-        const progressBarHeight = 8;
-        const progressBarX = this.turnPanelX + 10;
-        const progressBarY = y + 80;
+        // Enhanced progress bar with papery styling
+        const progressBarWidth = this.turnPanelWidth - 30;
+        const progressBarHeight = 12;
+        const progressBarX = this.turnPanelX + 15;
+        const progressBarY = y + 85;
         
-        // Progress background
-        this.ctx.fillStyle = '#2d3748';
+        // Progress background with inset shadow
+        this.ctx.fillStyle = '#d9c7a3';
+        this.ctx.shadowColor = 'rgba(139, 115, 85, 0.4)';
+        this.ctx.shadowBlur = 2;
+        this.ctx.shadowOffsetX = 1;
+        this.ctx.shadowOffsetY = 1;
         this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+        this.ctx.shadowBlur = 0;
         
-        // Progress fill
+        // Progress fill with gradient
         const progress = this.totalTurns / this.maxTurns;
-        this.ctx.fillStyle = '#4299e1';
+        const progressGradient = this.ctx.createLinearGradient(progressBarX, progressBarY, progressBarX, progressBarY + progressBarHeight);
+        progressGradient.addColorStop(0, '#8b7355');
+        progressGradient.addColorStop(1, '#6b5a47');
+        this.ctx.fillStyle = progressGradient;
         this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
         
         // Progress border
-        this.ctx.strokeStyle = '#4a5568';
-        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = '#8b7355';
+        this.ctx.lineWidth = 2;
         this.ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
         
         // War progress text
-        this.ctx.fillStyle = '#cbd5e0';
-        this.ctx.font = '12px monospace';
-        this.ctx.fillText(`War Progress: ${Math.round(progress * 100)}%`, x - 10, y + 105);
+        this.ctx.fillStyle = '#4a3728';
+        this.ctx.font = '14px Georgia, serif';
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.shadowBlur = 1;
+        this.ctx.fillText(`War Progress: ${Math.round(progress * 100)}%`, x - 15, y + 115);
         
-        // Resource counters
-        this.ctx.fillStyle = '#f7fafc';
-        this.ctx.font = 'bold 14px monospace';
+        // Resource counters and strength with better styling
+        this.ctx.font = 'bold 16px Georgia, serif';
         
         // Faction 1 resources and strength
         const faction1Info = FACTIONS[this.faction1];
         const faction1Strength = this.getTotalFactionStrength(this.faction1);
-        this.ctx.fillStyle = faction1Info.borderColor;
-        this.ctx.fillText(`${faction1Info.name}: ${this.faction1Resources} Resources`, x - 10, y + 130);
-        this.ctx.fillText(`Strength: ${faction1Strength}/100`, x - 10, y + 145);
+        this.ctx.fillStyle = '#4a3728';
+        this.ctx.fillText(`${faction1Info.name}: ${this.faction1Resources} Resources`, x - 15, y + 140);
+        this.ctx.font = '14px Georgia, serif';
+        this.ctx.fillText(`Strength: ${faction1Strength}/100`, x - 15, y + 155);
         
         // Faction 2 resources and strength
         const faction2Info = FACTIONS[this.faction2];
         const faction2Strength = this.getTotalFactionStrength(this.faction2);
-        this.ctx.fillStyle = faction2Info.borderColor;
-        this.ctx.fillText(`${faction2Info.name}: ${this.faction2Resources} Resources`, x - 10, y + 165);
-        this.ctx.fillText(`Strength: ${faction2Strength}/100`, x - 10, y + 180);
+        this.ctx.font = 'bold 16px Georgia, serif';
+        this.ctx.fillText(`${faction2Info.name}: ${this.faction2Resources} Resources`, x - 15, y + 175);
+        this.ctx.font = '14px Georgia, serif';
+        this.ctx.fillText(`Strength: ${faction2Strength}/100`, x - 15, y + 190);
         
         this.ctx.restore();
     }
@@ -1439,22 +1688,37 @@ canvas.addEventListener('contextmenu', function(event) {
         console.log(`Unit can act: ${unit.canAct()}, Unit has acted: ${unit.hasActed}`);
         
         if (board.canMoveUnit(unit, clickedHex)) {
-            console.log(`Moving ${unit.typeData.name} to ${clickedHex.row},${clickedHex.col} (Cost: ${movementCost})`);
+            // Show movement cost overlay before confirming
+            const confirmMove = confirm(
+                `Move ${unit.typeData.name} to (${clickedHex.row},${clickedHex.col})?\n\n` +
+                `Movement Cost: ${movementCost} resources\n` +
+                `Current Resources: ${currentResources}\n` +
+                `Remaining Resources: ${currentResources - movementCost}\n` +
+                (board.getUnitsOnHex(unit.hex).length > 1 ? '\nNote: +1 resource penalty for leaving unit group' : '')
+            );
             
-            if (board.moveUnitToHex(unit, clickedHex)) {
-                console.log('Movement successful');
-                board.draw();
+            if (confirmMove) {
+                console.log(`Moving ${unit.typeData.name} to ${clickedHex.row},${clickedHex.col} (Cost: ${movementCost})`);
+                
+                if (board.moveUnitToHex(unit, clickedHex)) {
+                    console.log('Movement successful');
+                    board.draw();
+                }
             }
         } else {
-            console.log('Cannot move unit - insufficient resources or unit cannot act');
-            
-            // Debug output
+            // Show why movement is not possible
+            let reason = '';
             if (!unit.canAct()) {
-                console.log('Unit cannot act (already acted this turn)');
+                reason = 'Unit has already acted this turn';
+            } else if (currentResources < movementCost) {
+                reason = `Insufficient resources (need ${movementCost}, have ${currentResources})`;
+            } else if (clickedHex.isWater) {
+                reason = 'Cannot move into water';
+            } else if (unit.hex === clickedHex) {
+                reason = 'Unit is already on this hex';
             }
-            if (currentResources < movementCost) {
-                console.log(`Insufficient resources: need ${movementCost}, have ${currentResources}`);
-            }
+            
+            alert(`Cannot move ${unit.typeData.name}:\n${reason}`);
         }
     }
 });
@@ -1541,6 +1805,11 @@ function toggleControls() {
         controls.style.height = '';
         controls.style.maxWidth = '';
     }
+}
+
+function toggleUnitControls() {
+    const unitControls = document.querySelector('.unit-controls');
+    unitControls.classList.toggle('collapsed');
 }
 
 // Draggable and resizable controls functionality
